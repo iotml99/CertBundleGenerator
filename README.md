@@ -1,20 +1,6 @@
 # SSL Certificate Bundle Generator
 
-[![GitHub](https://img.shields.io/badge/GitHub-CertBundleGenerator-blue?logo=github)](https://github.com/iotml99/CerINFO: Processing google.com:443
-INFO: SUCCESS: Retrieved certificate chain for google.com:443 (3 certificates)
-INFO: SUCCESS: Added 3/3 certificates for google.com (size: 8746 bytes, 0 duplicates)
-INFO: Processing github.com:443
-INFO: SUCCESS: Retrieved certificate chain for github.com:443 (3 certificates)
-INFO: SUCCESS: Added 3/3 certificates for github.com (size: 4383 bytes, 0 duplicates)
-ERROR: Connection timeout for unreachable-site.com:443
-INFO: SUCCESS: Bundle validation passed: 15 certificates, 28934 bytes
-INFO: SUCCESS: Bundle created successfully!
-INFO: Processed: 5 websites
-INFO: Total certificates found: 15
-INFO: Duplicate certificates skipped: 0
-INFO: Unique certificates in bundle: 15
-INFO: Final bundle size: 28934 bytes
-INFO: Output written to: bundle.pemtor)
+[![GitHub](https://img.shields.io/badge/GitHub-CertBundleGenerator-blue?logo=github)](https://github.com/iotml99/CertBundleGenerator)
 [![Python](https://img.shields.io/badge/Python-3.6%2B-blue?logo=python)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
