@@ -1,0 +1,15 @@
+# Sample websites for SSL certificate bundle generation
+# High priority websites (processed first)
+https://api.openweathermap.org/
+google.com
+github.com
+stackoverflow.com
+python.org
+
+# Medium priority
+mozilla.org
+cloudflare.com
+
+# Lower priority websites
+example.com
+httpbin.org
