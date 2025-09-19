@@ -1,6 +1,20 @@
 # SSL Certificate Bundle Generator
 
-[![GitHub](https://img.shields.io/badge/GitHub-CertBundleGenerator-blue?logo=github)](https://github.com/iotml99/CertBundleGenerator)
+[![GitHub](https://img.shields.io/badge/GitHub-CertBundleGenerator-blue?logo=github)](https://github.com/iotml99/CerINFO: Processing google.com:443
+INFO: SUCCESS: Retrieved certificate chain for google.com:443 (3 certificates)
+INFO: SUCCESS: Added 3/3 certificates for google.com (size: 8746 bytes, 0 duplicates)
+INFO: Processing github.com:443
+INFO: SUCCESS: Retrieved certificate chain for github.com:443 (3 certificates)
+INFO: SUCCESS: Added 3/3 certificates for github.com (size: 4383 bytes, 0 duplicates)
+ERROR: Connection timeout for unreachable-site.com:443
+INFO: SUCCESS: Bundle validation passed: 15 certificates, 28934 bytes
+INFO: SUCCESS: Bundle created successfully!
+INFO: Processed: 5 websites
+INFO: Total certificates found: 15
+INFO: Duplicate certificates skipped: 0
+INFO: Unique certificates in bundle: 15
+INFO: Final bundle size: 28934 bytes
+INFO: Output written to: bundle.pemtor)
 [![Python](https://img.shields.io/badge/Python-3.6%2B-blue?logo=python)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
@@ -8,7 +22,7 @@ A Python script that generates SSL certificate PEM bundles from a list of websit
 
 ## Features
 
-- 🔐 **SSL Certificate Retrieval**: Automatically fetches SSL certificates from websites
+- 🔐 **Full Certificate Chain Retrieval**: Automatically fetches complete SSL certificate chains (server + intermediate certificates) from websites
 - 🔄 **Deduplication**: Removes duplicate certificates based on certificate content
 - 📏 **Size Management**: Respects maximum bundle size limits with safety buffer
 - 🎯 **Priority-Based Processing**: Processes websites in order of priority (first = highest priority)
@@ -16,7 +30,8 @@ A Python script that generates SSL certificate PEM bundles from a list of websit
 - ⚡ **Error Handling**: Continues processing even when some websites fail
 - 🌐 **Flexible Input**: Supports hostnames with or without protocols and custom ports
 - ✅ **Bundle Validation**: Validates generated PEM bundles for format and integrity
-- 📦 **No Dependencies**: Uses only Python standard library
+- �️ **Smart Chain Detection**: Uses OpenSSL when available for full chains, falls back to Python SSL for server certificates
+- �📦 **Minimal Dependencies**: Uses only Python standard library + OpenSSL (optional but recommended)
 
 ## Quick Start
 
@@ -42,6 +57,11 @@ python ssl_bundle_generator.py -i websites.txt -o bundle.pem -s 32768
 
 2. **No external dependencies required**
    The script uses only Python's standard library - no additional packages needed!
+   
+   **Optional**: For full certificate chain support, ensure OpenSSL is available in your PATH:
+   - **Windows**: Download from [Win32/Win64 OpenSSL](https://slproweb.com/products/Win32OpenSSL.html)
+   - **macOS**: `brew install openssl` 
+   - **Linux**: Usually pre-installed, or `sudo apt-get install openssl`
 
 ## Usage
 
@@ -58,6 +78,7 @@ python ssl_bundle_generator.py -i websites.txt -o bundle.pem -s 32768
 | `--input` | `-i` | Input file containing websites (one per line) | Yes | - |
 | `--output` | `-o` | Output file for the PEM bundle | Yes | - |
 | `--max-size` | `-s` | Maximum size of PEM bundle in bytes | No | 32768 (32KB) |
+| `--root-only` | - | Include only root CA certificates (smaller bundle, may reduce compatibility) | No | False |
 
 ### Input File Format
 
@@ -95,6 +116,11 @@ python ssl_bundle_generator.py -i high-priority-sites.txt -o large-bundle.pem -s
 ### Example 3: Small Bundle for Embedded Systems
 ```bash
 python ssl_bundle_generator.py -i critical-sites.txt -o small-bundle.pem -s 16384
+```
+
+### Example 4: Root CA Only Bundle (Minimal Size)
+```bash
+python ssl_bundle_generator.py -i websites.txt -o root-cas.pem --root-only
 ```
 
 ## Sample Input File
@@ -161,19 +187,45 @@ INFO: Final bundle size: 8934 bytes
 INFO: Output written to: bundle.pem
 ```
 
+## Certificate Chain vs Root-Only Modes
+
+### 🔗 Full Certificate Chain Mode (Default)
+- **What it includes**: Server certificates + intermediate certificates + root CA certificates
+- **Bundle size**: Larger (typically 3x more certificates)
+- **Compatibility**: Works with all SSL clients and browsers
+- **Use case**: Production environments, public-facing applications
+
+### 🏛️ Root-Only Mode (`--root-only`)
+- **What it includes**: Only root CA certificates (trust anchors)
+- **Bundle size**: Much smaller (75% size reduction typical)
+- **Compatibility**: Limited - may not work with all SSL clients
+- **Use case**: Embedded systems, memory-constrained environments, CA trust store initialization
+
+### 📊 Comparison Example
+
+| Mode | Certificates | Bundle Size | Compatibility | Best For |
+|------|-------------|-------------|---------------|----------|
+| **Full Chain** | 14 certs | 36 KB | ✅ Universal | Production, web apps |
+| **Root-Only** | 5 certs | 9 KB | ⚠️ Limited | Embedded, trust stores |
+
 ## How It Works
 
 1. **Input Processing**: Reads and parses the website list from the input file
-2. **Certificate Retrieval**: For each website (in priority order):
-   - Establishes SSL connection
-   - Retrieves the server certificate
-   - Converts from DER to PEM format
-3. **Deduplication**: Uses SHA-256 hashing to identify and skip duplicate certificates
-4. **Size Management**: 
-   - Tracks running total of bundle size
+2. **Certificate Chain Retrieval**: For each website (in priority order):
+   - **Primary Method**: Uses OpenSSL command-line tool to retrieve complete certificate chain (server + intermediate certificates)
+   - **Fallback Method**: If OpenSSL unavailable, uses Python SSL to retrieve server certificate only
+   - Establishes SSL connection with proper hostname verification
+   - Converts certificates from DER to PEM format
+3. **Certificate Filtering**: 
+   - **Default Mode**: Includes all certificates in the chain
+   - **Root-Only Mode**: Extracts and includes only root CA certificates (self-signed certificates)
+4. **Deduplication**: Uses SHA-256 hashing to identify and skip duplicate certificates across all chains
+5. **Size Management**: 
+   - Tracks running total of bundle size including all certificates in chains
    - Stops adding certificates when approaching max_size - 12 bytes
    - Ensures priority websites get included first
-5. **Bundle Generation**: Concatenates all unique certificates into final PEM bundle
+6. **Bundle Generation**: Concatenates all unique certificates from all chains into final PEM bundle
+7. **Chain Validation**: Validates complete certificate chains for proper PEM structure and content
 
 ## Error Handling
 
@@ -197,13 +249,23 @@ The script implements intelligent size management:
 ## Technical Details
 
 - **Python Version**: Compatible with Python 3.6+
-- **Dependencies**: No external dependencies - uses only Python standard library
+- **Dependencies**: 
+  - **Required**: Python standard library only
+  - **Optional**: OpenSSL command-line tool (for complete certificate chains and root CA detection)
+- **Certificate Chain Retrieval**:
+  - **Primary**: OpenSSL `s_client -showcerts` command (retrieves full chains)
+  - **Fallback**: Python `ssl.getpeercert()` (server certificate only)
+- **Root CA Detection**:
+  - **Method 1**: OpenSSL `x509 -subject -issuer` to identify self-signed certificates
+  - **Method 2**: Heuristic fallback (last certificate in chain)
 - **SSL Context**: Uses Python's default SSL context for certificate validation
 - **Certificate Format**: Generates standard PEM format with proper line breaks
 - **Encoding**: All file operations use UTF-8 encoding
-- **Timeout**: 10-second connection timeout for each website
-- **Validation**: Comprehensive PEM format and content validation
+- **Timeout**: 15-second timeout for OpenSSL, 10-second for Python SSL
+- **Validation**: Comprehensive PEM format and content validation for certificate chains
 - **Default Size**: 32KB default bundle size limit (adjustable with `-s` option)
+- **Chain Support**: Handles variable-length certificate chains (2-4 certificates typical)
+- **Deduplication**: Individual certificate-level deduplication across all websites
 
 ## Troubleshooting
 
@@ -228,6 +290,17 @@ The script implements intelligent size management:
 5. **"Bundle validation failed"**
    - Check for corrupted certificates or invalid PEM format
    - Verify bundle size is within specified limits
+
+6. **Missing intermediate certificates**
+   - Install OpenSSL for complete certificate chain support
+   - Without OpenSSL, only server certificates are included
+   - Some applications require full certificate chains for proper SSL validation
+
+7. **Root-only mode not working**
+   - Root-only bundles may not work with all SSL clients
+   - Missing intermediate certificates can cause validation failures
+   - Use full chain mode for better compatibility
+   - Consider root-only only for specific use cases (embedded systems, CA trust stores)
 
 ### Performance Tips
 
